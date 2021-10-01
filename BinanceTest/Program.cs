@@ -12,7 +12,7 @@ using System.Threading.Tasks;
 
 namespace BinanceTest
 {
-    class Program
+    internal static class Program
     {
         private const string Baseurl = "https://api.binance.com";
         private static async Task Main()
@@ -44,20 +44,7 @@ namespace BinanceTest
                         "/api/v3/avgPrice", Method.GET); // getting BTCUSDT price
                     var btcost = btcCost.Content.Split('"');
                     Console.WriteLine("BTCUSDT " + btcost[5]);
-                    IRestResponse
-                        limit = Request(new Dictionary<string, dynamic>(), "/api/v3/exchangeInfo",
-                            Method.GET); //getting request limits
-                    btcost = limit.Content.Split('"');
-                    string limits = "";
-                    var needed = false;
-                    foreach (var s in btcost)
-                    {
-                        if (s == "rateLimits") needed = true;
-                        if (s == "exchangeFilters") break;
-                        if (needed) limits += s;
-                    }
-
-                    Console.WriteLine("request limits: " + limits);
+                    GetLimits();
                     if (readUsers != null)
                         foreach (var t in readUsers.Where(t => t != null))
                         {
@@ -127,6 +114,31 @@ namespace BinanceTest
             var hmac = new HMACSHA256(keyBytes);
             var bytes = hmac.ComputeHash(queryStringBytes);
             return BitConverter.ToString(bytes).Replace("-", "").ToLower();
+        }
+
+        private static void GetLimits() //получение лимитов
+        {
+            IRestResponse
+                limit = Request(new Dictionary<string, dynamic>(), "/api/v3/exchangeInfo",
+                    Method.GET); //getting request limits
+            var PrettyLimits = limit.Content;
+            PrettyLimits = PrettyLimits.Substring(PrettyLimits.IndexOf("\"rateLimits\"" )+13);
+            PrettyLimits = PrettyLimits.Remove(PrettyLimits.IndexOf("\"exchangeFilters\"")-1);
+            try
+            {
+                var limitsDeserialized = JsonSerializer.Deserialize<List<rateLimits>>(PrettyLimits);
+                if (limitsDeserialized != null)
+                    foreach (var t in limitsDeserialized)
+                    {
+                        Console.WriteLine("Rate limit type - " + t.rateLimitType + " Interval - " + t.interval +
+                                          " Limit - " + t.limit);
+                    } else Console.WriteLine("Didn't get any limits 404");
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+                throw;
+            }
         }
     }
 }
