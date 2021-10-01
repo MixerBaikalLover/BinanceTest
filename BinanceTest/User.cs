@@ -5,7 +5,7 @@ namespace BinanceTest
     public class User
     {
         private string _apiKey;
-        private string _secretKey;
+        private byte[] _secretKey;
         private string _userName;
         public int userId { get; set; }
         private static int _idCounter = 0;
@@ -16,7 +16,7 @@ namespace BinanceTest
             set => _apiKey = value;
         }
 
-        public string secretKey
+        public byte[] secretKey
         {
             get => _secretKey;
             set => _secretKey = value;
@@ -27,7 +27,7 @@ namespace BinanceTest
             set => _userName = value;
         }
 
-        public User(string apiKey, string secretKey, string userName)
+        public User(string apiKey, byte[] secretKey, string userName)
         {
             _apiKey = apiKey;
             _secretKey = secretKey;
@@ -36,7 +36,7 @@ namespace BinanceTest
             userId = _idCounter;
         }
 
-        public User(string apiKey, string secretKey, string userName, int userId)
+        public User(string apiKey, byte[] secretKey, string userName, int userId)
         {
             _apiKey = apiKey;
             _secretKey = secretKey;
