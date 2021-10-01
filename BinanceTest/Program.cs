@@ -48,8 +48,18 @@ namespace BinanceTest
                     if (readUsers != null)
                         foreach (var t in readUsers.Where(t => t != null))
                         {
-                            Console.WriteLine(t.userName + " " + GetAccount(t));
+                            Console.WriteLine(t.userName + " Balances :");
+                            var accBalances = GetAccount(t);
+                            if (accBalances == null) continue;
+                            
+                            for (int i = 0; i < accBalances.Count; i++)
+                            {
+                                if ((accBalances[i].free == "0.00000000" & accBalances[i].locked == "0.00000000") || (accBalances[i].free == "0.00" & accBalances[i].locked == "0.00"))
+                                    continue;
+                                Console.WriteLine(" "  + accBalances[i].asset + " free - " + accBalances[i].free + " locked- " + accBalances[i].locked);
+                            }
                         }
+                    
                     Thread.Sleep(6000);
                 }
             }
@@ -76,7 +86,7 @@ namespace BinanceTest
             }
         }
 
-        private static string GetAccount(User user) //getting account info
+        private static List<Balance>? GetAccount(User user) //getting account info
         {
             var request = new RestRequest(Method.GET);
             try
@@ -86,9 +96,10 @@ namespace BinanceTest
                 request.AddParameter("timestamp", DateTimeOffset.Now.ToUnixTimeMilliseconds());
                 request.AddQueryParameter("signature", CreateSignature(request.Parameters, user.secretKey));
                 var account = client.Execute(request).Content;
-                string balances = account.Substring(account.IndexOf("\"balances\":[", StringComparison.Ordinal));
+                string balances = account.Substring(account.IndexOf("\"balances\":[", StringComparison.Ordinal)+11);
                 balances = balances.Remove(balances.IndexOf("\"perm", StringComparison.Ordinal)-1, 24);
-                return balances;
+                var balancesDeserialized = JsonSerializer.Deserialize<List<Balance>>(balances);
+                return balancesDeserialized;
 
             }
             catch (Exception e)
