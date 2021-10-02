@@ -17,30 +17,14 @@ namespace BinanceTest
         private const string Baseurl = "https://api.binance.com";
         private static async Task Main()
         {
-            // занесение в json файл всех юзеров
-            /*var keyBytes = Encoding.UTF8.GetBytes("Iyf3cFri9TL5EX66T6cCqJmqi2dejo7Rgi8acVseJTYDG6DDINZPzo2mV1th0kFD");
-            var keyBytes1 = Encoding.UTF8.GetBytes("1NsMrpKDjeKRhkc10KZGD3tOkBh4vGJtLzRTKSlRCKLGApdHTGMNobW32YZ44kyn");
-            var keyBytes2 = Encoding.UTF8.GetBytes("puR7xnTCfG4YQI9BJPSgoJE3em2EKALUxKHxiRJVdjYHLGHmr2gUFlZuKDXwjlPO");
-            User user = new User("KK6sfVa9BW6tCUsN9eghRHMK28DOGSB8MyBfmZgDyVD64po0wDSH66qUmPuTvhnq",
-               keyBytes, "Mixer");
-            User secondUser = new User("G5iVYWMjyMjNcQrS5t1OZxOLSlDSX58G2Yyrd9Dr9OSSeMk5leqzOcFvMBv1GdDx",
-                keyBytes1, "Vyacheslav");
-            User thirdUser = new User("m7qslS4h9oJMD6Exp0kySTR6cZGMUgvHCmdYvG3rIYlWJu7jyLRTkfkfyCZ6jwX9",
-                keyBytes2, "Sergey");
-               var users = new List<User>
-               {
-                   user, secondUser, thirdUser
-               };
-               var jsonString = JsonSerializer.Serialize(users);
-               File.WriteAllText("userbI.json", jsonString); */
 
-         List<User> readUsers; //считывание юзеров из json-файла
-         await using (var fs = new FileStream("userbI.json", FileMode.OpenOrCreate))
-            {
-                readUsers = await JsonSerializer.DeserializeAsync<List<User>>(fs);
-            }
             try
             {
+                List<User> readUsers; //считывание юзеров из json-файла
+                await using (var fs = new FileStream("userbI.json", FileMode.OpenOrCreate))
+                {
+                    readUsers = await JsonSerializer.DeserializeAsync<List<User>>(fs);
+                }
                 while (true)
                 {
                     IRestResponse btcCost = Request(new Dictionary<string, dynamic>() {{"symbol", "BTCUSDT"}},
@@ -48,21 +32,7 @@ namespace BinanceTest
                     var btcost = btcCost.Content.Split('"');
                     Console.WriteLine("BTCUSDT " + btcost[5]);
                     GetLimits();
-                    if (readUsers != null)
-                        foreach (var t in readUsers.Where(t => t != null))
-                        {
-                            Console.WriteLine(t.userName + " Balances :");
-                            var accBalances = GetAccount(t);
-                            if (accBalances == null) continue;
-                            
-                            for (int i = 0; i < accBalances.Count; i++)
-                            {
-                                if ((accBalances[i].free == "0.00000000" & accBalances[i].locked == "0.00000000") || (accBalances[i].free == "0.00" & accBalances[i].locked == "0.00"))
-                                    continue;
-                                Console.WriteLine(" "  + accBalances[i].asset + " free - " + accBalances[i].free + " locked- " + accBalances[i].locked);
-                            }
-                        }
-                    
+                    GetBalances(readUsers);
                     Thread.Sleep(6000);
                 }
             }
@@ -122,7 +92,6 @@ namespace BinanceTest
                         signature += $"{item.Name}={item.Value}&";
                 signature = signature.Substring(0, signature.Length - 1);
             }
-            
             var queryStringBytes = Encoding.UTF8.GetBytes(signature);
             var hmac = new HMACSHA256(secretKey);
             var bytes = hmac.ComputeHash(queryStringBytes);
@@ -131,14 +100,13 @@ namespace BinanceTest
 
         private static void GetLimits() //получение лимитов
         {
-            IRestResponse
-                limit = Request(new Dictionary<string, dynamic>(), "/api/v3/exchangeInfo",
-                    Method.GET); //getting request limits
-            var prettyLimits = limit.Content;
-            prettyLimits = prettyLimits.Substring(prettyLimits.IndexOf("\"rateLimits\"" )+13);
-            prettyLimits = prettyLimits.Remove(prettyLimits.IndexOf("\"exchangeFilters\"")-1);
             try
             {
+                var limit = Request(new Dictionary<string, dynamic>(), "/api/v3/exchangeInfo",
+                        Method.GET); //getting request limits
+                var prettyLimits = limit.Content;
+                prettyLimits = prettyLimits.Substring(prettyLimits.IndexOf("\"rateLimits\"" )+13);
+                prettyLimits = prettyLimits.Remove(prettyLimits.IndexOf("\"exchangeFilters\"")-1);
                 var limitsDeserialized = JsonSerializer.Deserialize<List<rateLimits>>(prettyLimits);
                 if (limitsDeserialized != null)
                     foreach (var t in limitsDeserialized)
@@ -152,6 +120,32 @@ namespace BinanceTest
                 Console.WriteLine(e);
                 throw;
             }
+        }
+
+        private static void GetBalances(List<User> users)
+        {
+            try
+            {
+                foreach (var t in users.Where(t => t != null))
+                {
+                    Console.WriteLine(t.userName + " Balances :");
+                    var accBalances = GetAccount(t);
+                    if (accBalances == null) continue;
+                            
+                    foreach (var t1 in accBalances)
+                    {
+                        if ((t1.free == "0.00000000" & t1.locked == "0.00000000") || (t1.free == "0.00" & t1.locked == "0.00"))
+                            continue;
+                        Console.WriteLine(" "  + t1.asset + " free - " + t1.free + " locked- " + t1.locked);
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+                throw;
+            }
+            
         }
     }
 }
